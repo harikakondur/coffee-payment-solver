@@ -1,10 +1,7 @@
 # MySQL Connectivity
 import mysql.connector as sqltor
-mycon = sqltor.connect(
-    host='localhost',
-    user='root',
-    passwd='harikakondur',
-    database='coffee')
+from config import MYSQL_CONFIG  # Import the configuration
+mycon = sqltor.connect(**MYSQL_CONFIG)
 csr = mycon.cursor()
 
 from coffee import *
@@ -12,26 +9,26 @@ from tkinter import *
 from coffee import calculateMaxDebt
 
 def addvalues():
+    updateDebts()
     r1 = (214, 219, 173)
     h1 = "#{:02x}{:02x}{:02x}".format(*r1)
     c.create_rectangle(15, 120, 400, 390, fill=h1, outline="olive", width=2)
-    
-    # Assuming the SQL query fetches all rows from the 'coworkers' table
-    csr.execute("SELECT coworkers.name, coworkers.drink_preference, coworkers.price, coworkers.debt, sub.transaction_count FROM coworkers JOIN (SELECT payer, COUNT(tid) AS transaction_count FROM transactions GROUP BY payer) AS sub ON coworkers.cid = sub.payer;")
-    values = csr.fetchall()
-    # Display the values
-    for j, row in enumerate(values):
-        for i, value in enumerate(row):
+
+    csr.execute("SELECT name, drink_preference, price, debt,count FROM coworkers")
+    coworker_values = csr.fetchall()
+    print('values',coworker_values)
+    for j, coworker_row in enumerate(coworker_values):
+        # Display coworker attributes
+        for i, value in enumerate(coworker_row):
             rgb_color = (98, 54, 28)
             hex_color = "#{:02x}{:02x}{:02x}".format(*rgb_color)
             c.create_text(w[i], h[j], text=str(value), font=('PT Mono', 13), anchor="nw", fill=hex_color, tags="values")
-
 
 def displayValues():
     newTransaction()
     addvalues()
 
-# Create the main window
+# Main window
 root = Tk()
 root.geometry('425x740')
 root.title("Coffee Payment Solver")
@@ -43,21 +40,16 @@ c = Canvas(root, width=400, height=600)
 c.pack(fill="both", expand=True)
 c.create_image(0, 0, image=bg, anchor='nw')
 
+#button command: Who's turn?
 def displayNextPayer():
     c.delete("name")
-
-    d, nextPayerId = calculateMaxDebt()
-    coworkers = getAllCoworkers()
-    name = [coworker[0] for coworker in coworkers if coworker[1] == nextPayerId]
-
-    if name:
-        payer = name[0]
-        # Create and display the new widget with the tag "name"
-        name_widget = Label(c, text=payer, font=('PT Mono', 15))
-        name_widget.pack()
-        c.create_window(200, 14, window=name_widget, anchor="nw", tags="name")
-    else:
-        print("No next payer found.")
+    d, nextPayerId,nextPayerName = calculateMaxDebt()
+    
+    # Create and display the new widget with the tag "name"
+    name_widget = Label(c, text=nextPayerName, font=('PT Mono', 15))
+    name_widget.pack()
+    c.create_window(200, 14, window=name_widget, anchor="nw", tags="name")
+  
 
 # buttons
 button1 = Button(root, text="Who's turn?", font=('PT Mono', 15), command=displayNextPayer)

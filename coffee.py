@@ -1,11 +1,9 @@
 # MySQL Connectivity
 import mysql.connector as sqltor
-mycon = sqltor.connect(
-    host='localhost',
-    user='root',
-    passwd='harikakondur',
-    database='coffee')
+from config import MYSQL_CONFIG  # Import the configuration
+mycon = sqltor.connect(**MYSQL_CONFIG)
 csr = mycon.cursor()
+
 # ------------Functions-------------------------
 
 # Returns a list of coworker ids excluding person
@@ -19,7 +17,7 @@ def getRest(id):       # List of tuples[(name,id,price)]
 
 
 def getAllCoworkers():  # List of tuples[(name,id,price)]
-    csr.execute("SELECT name, cid, price FROM coworkers")
+    csr.execute("SELECT name, cid, price,count FROM coworkers")
     names = csr.fetchall()
     return names
 
@@ -49,15 +47,17 @@ def updateDebts():
         # Update in coworkers table
         q3 = "UPDATE coworkers SET debt = %s WHERE cid = %s"
         csr.execute(q3, (debt, i[1]))
+        mycon.commit()
 
 # Returns the id of the person with the most cumulative debt
 
 
 def calculateMaxDebt():
     updateDebts()
-    csr.execute("SELECT MAX(debt) AS max_debt, (SELECT cid FROM coworkers WHERE debt = (SELECT MAX(debt) FROM coworkers) LIMIT 1) AS max_cid FROM coworkers")
+    csr.execute("SELECT MAX(debt) AS max_debt, (SELECT cid FROM coworkers WHERE debt = (SELECT MAX(debt) FROM coworkers) LIMIT 1) AS max_cid,(SELECT name FROM coworkers WHERE cid = (SELECT cid FROM coworkers WHERE debt = (SELECT MAX(debt) FROM coworkers) LIMIT 1) LIMIT 1) AS max_name FROM coworkers")
     result = csr.fetchone()
-    return result[0], result[1]
+    max_debt, max_cid, max_name = result[0], result[1], result[2]
+    return max_debt, max_cid, max_name
 
 # Executes the payment and records the transaction
 
@@ -68,16 +68,30 @@ def newTransaction():
     check = csr.fetchall()
     if (not check):
         # Random person goes first
-        generatePayments(getAllCoworkers()[0][1], getRest(
-            getAllCoworkers()[0][1]))
+        id=getAllCoworkers()[0][1]
+        generatePayments(id, getRest(getAllCoworkers()[0][1]))
+        csr.execute("select count from coworkers where cid='{}'").format(id)
+        count=csr.fetchall()
+        print(count)
+        c=count[0][0]+ 1
+        csr.execute("UPDATE coworkers SET count = '{}' WHERE cid = '{}'").format(c, id)        
+
     # Person with the most cumulative debt pays
     else:
-        d, nextPayerId = calculateMaxDebt()
-        name = [coworker[0] for coworker in getAllCoworkers() if coworker[1] == nextPayerId][0]
-        print("next payer:", nextPayerId, " ", name)
+        d, nextPayerId,nextPayerName = calculateMaxDebt()
+        csr.execute("select count from coworkers where cid='{}'".format(nextPayerId))
+        count=csr.fetchall()
+        print(count)
+        c=count[0][0]+ 1
+        csr.execute("UPDATE coworkers SET count = '{}' WHERE cid = '{}'".format(c, nextPayerId))        
+        print("next payer:", nextPayerId, " ",nextPayerName )
         print('debt:', d)
         generatePayments(nextPayerId, getRest(nextPayerId))
         print('transaction complete !')
+        # print("inside coffee: ")
+        # csr.execute("SELECT name, drink_preference, price, debt,count FROM coworkers")
+        # coworker_values = csr.fetchall()
+        # print('values',coworker_values)
 
 
 def generatePayments(payer_id, restOfCoworkers):
@@ -98,9 +112,3 @@ def generatePayments(payer_id, restOfCoworkers):
     mycon.commit()
     updateDebts()
 
-
-# newTransaction()
-debt, id = calculateMaxDebt()
-csr.execute("SELECT name FROM coworkers WHERE cid='{}'".format(id))
-name = csr.fetchall()
-print(name[0])

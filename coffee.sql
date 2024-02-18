@@ -7,7 +7,8 @@ create table if not exists coworkers (
     name VARCHAR(25),
     drink_preference VARCHAR(25),
     price decimal(5,2),
-    debt decimal(10,2) DEFAULT 0.0
+    debt decimal(10,2) DEFAULT 0.0,
+    count int default 0
 );
 
 create table if not exists transactions(
@@ -28,12 +29,18 @@ create table if not exists payment(
     foreign key (payee) references coworkers(cid)on delete cascade,
     foreign key (tid) references transactions(tid)on delete cascade);
 
-insert into coworkers values (1,"Bob","Latte",3.50,0);
-insert into coworkers values (2,"Jeremy","Americano",4,0);
-insert into coworkers values (3,"Alex","Coffee",2,0);
-insert into coworkers values (4,"Harika","Chai",2.50,0);
-insert into coworkers values (5,"Amy","Black Tea",3.75,0);
-insert into coworkers values (6,"Ben","Caramel Latte",2.20,0);
-insert into coworkers values (7,"Alice","Peppermint Tea",3,0);
+insert into coworkers values (1,"Bob","Latte",3.50,0,0);
+insert into coworkers values (2,"Jeremy","Americano",4,0,0);
+insert into coworkers values (3,"Alex","Coffee",2,0,0);
+insert into coworkers values (4,"Harika","Chai",2.50,0,0);
+insert into coworkers values (5,"Amy","Black Tea",3.75,0,0);
+insert into coworkers values (6,"Ben","Caramel Latte",2.20,0,0);
+insert into coworkers values (7,"Alice","Peppermint Tea",3,0,0);
 
-select * from payment;
+SELECT MAX(debt) AS max_debt, 
+           (SELECT cid FROM coworkers WHERE debt = (SELECT MAX(debt) FROM coworkers) LIMIT 1) AS max_cid,
+           (SELECT name FROM coworkers WHERE cid = (SELECT cid FROM coworkers WHERE debt = (SELECT MAX(debt) FROM coworkers) LIMIT 1) LIMIT 1) AS max_name
+    FROM coworkers;
+    
+    select * from coworkers;
+    SELECT name, drink_preference, price, debt,count FROM coworkers;
