@@ -2,7 +2,7 @@
 
 ## Description
 
-This project is a simple coffee payment solver implemented using Python with a graphical interface (GUI) using tkinter and MySQL for the backend.
+This project is a coffee payment solver used to determine which person among a group is to pay next. It is implemented using Python with a graphical interface (GUI) using tkinter and MySQL for the backend.
 
 ## MySQL Setup
 
